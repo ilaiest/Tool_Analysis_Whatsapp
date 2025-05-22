@@ -237,7 +237,7 @@ Busca elementos como:
 
 Si la imagen NO cumple con estos criterios de alta relevancia directa para DiDi (por ejemplo, si es un meme genérico, una foto personal, un paisaje, comida, un vehículo sin clara identificación DiDi o contexto laboral, o contenido ambiguo), clasifícala como 'NO PRIORITARIA'.
 Si SÍ cumple con los criterios de alta relevancia directa, responde 'PRIORITARIA'.
-Responde únicamente con 'PRIORITARIA' o 'NO PRIORITARIA'.
+Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
 """
                 is_relevant = False
                 with st.spinner(f"Clasificando relevancia de '{row_image['media_filename']}'..."):
@@ -251,7 +251,7 @@ Responde únicamente con 'PRIORITARIA' o 'NO PRIORITARIA'.
                         )
                         if response_relevance.parts and response_relevance.text:
                             classification = response_relevance.text.strip().upper()
-                            if "PRIORITARIA" in classification:
+                            if "Relevante" in classification:
                                 is_relevant = True
                         else:
                             # Si la respuesta es bloqueada o vacía, se asume no relevante.
