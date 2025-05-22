@@ -226,8 +226,18 @@ def run_image_analysis_gemini_and_display(df_full_chat, df_filtered_for_selectio
                 if img_pil.mode == 'RGBA': img_pil = img_pil.convert('RGB')
 
                 # --- PASO 1: Clasificación de Relevancia ---
-                prompt_relevance_check = """Evalúa la siguiente imagen. ¿Está relacionada principalmente con temas de trabajo de un conductor de DiDi (como incentivos, ganancias, mapas, problemas de la app, comunicaciones de la empresa, vehículos de trabajo, condiciones de la carretera relevantes para el trabajo) O es una imagen personal/meme/irrelevante para el contexto laboral (como selfies, comida, vacaciones, chistes no relacionados)?
-Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
+                prompt_relevance_check = """Analiza la siguiente imagen. Determina si su contenido visual es **directa y significativamente relevante** para un análisis de negocio o de operaciones de DiDi.
+Busca elementos como:
+- Capturas de pantalla de la aplicación DiDi (ganancias, mapas, mensajes de la app, problemas técnicos).
+- Comunicaciones oficiales de DiDi (banners, anuncios de incentivos, cambios de tarifa).
+- Precios, tarifas, o discusiones sobre ingresos claramente visibles.
+- Marketing o publicidad de DiDi.
+- Vehículos claramente identificados como DiDi en un contexto de trabajo (ej. mostrando logos, en zonas de espera designadas).
+- Problemas mecánicos o de seguridad del vehículo si el contexto sugiere que es un vehículo de trabajo.
+
+Si la imagen NO cumple con estos criterios de alta relevancia directa para DiDi (por ejemplo, si es un meme genérico, una foto personal, un paisaje, comida, un vehículo sin clara identificación DiDi o contexto laboral, o contenido ambiguo), clasifícala como 'NO PRIORITARIA'.
+Si SÍ cumple con los criterios de alta relevancia directa, responde 'PRIORITARIA'.
+Responde únicamente con 'PRIORITARIA' o 'NO PRIORITARIA'.
 """
                 is_relevant = False
                 with st.spinner(f"Clasificando relevancia de '{row_image['media_filename']}'..."):
@@ -241,7 +251,7 @@ Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
                         )
                         if response_relevance.parts and response_relevance.text:
                             classification = response_relevance.text.strip().upper()
-                            if "RELEVANTE" in classification:
+                            if "PRIORITARIA" in classification:
                                 is_relevant = True
                         else:
                             # Si la respuesta es bloqueada o vacía, se asume no relevante.
