@@ -172,7 +172,8 @@ def run_text_analysis_gemini_and_return(conversation_text, start_date_str, end_d
     except Exception as e: st.error(f"Error en resumen con Gemini ({text_model_name}): {e}"); st.exception(e); return None
 
 #---- Funcion para analisis de imagenes-- Cambiar Prompt para tener otro contexto
-#edit ahora se analiza primero si la imagen es relevante
+#Se añadio una revision para definir si una imagen es relevante
+
 def run_image_analysis_gemini_and_display(df_full_chat, df_filtered_for_selection, max_images_to_analyze,
                                           vision_model_name):
     st.subheader(f"🖼️ Análisis de Imágenes Relevantes con Gemini (primeras {max_images_to_analyze} consideradas)")
@@ -197,7 +198,7 @@ def run_image_analysis_gemini_and_display(df_full_chat, df_filtered_for_selectio
     images_analyzed_in_detail = 0
 
     try:
-        # Se usa el mismo modelo para clasificacion y analisis detallado,optimizar con otro modelo mas sencillo si es necesario
+        # Se usa el mismo modelo para clasificacion y analisis detallado si es necesario usar un modelo mas sencillo
         model_vision = genai.GenerativeModel(vision_model_name)
 
         # Configuración de seguridad 
@@ -206,8 +207,8 @@ def run_image_analysis_gemini_and_display(df_full_chat, df_filtered_for_selectio
                                    "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
 
         for original_index, row_image in candidate_images.iterrows():
-            if images_processed_for_relevance >= max_images_to_analyze * 2 and images_analyzed_in_detail >= max_images_to_analyze:  # Heurística para no procesar demasiadas si pocas son relevantes
-                st.caption(f"Se alcanzó el límite de consideración o análisis de imágenes.")
+            if images_processed_for_relevance >= (max_images_to_analyze * 2) + 5 and images_analyzed_in_detail >= max_images_to_analyze :
+                st.caption(f"Se alcanzó un límite de consideración de imágenes para mantener el rendimiento.")
                 break
             if images_analyzed_in_detail >= max_images_to_analyze:
                 st.caption(f"Se alcanzó el límite de {max_images_to_analyze} imágenes analizadas en detalle.")
@@ -224,14 +225,14 @@ def run_image_analysis_gemini_and_display(df_full_chat, df_filtered_for_selectio
                 img_pil = Image.open(image_path)
                 if img_pil.mode == 'RGBA': img_pil = img_pil.convert('RGB')
 
-                # Clasificación de Relevancia
+                # --- PASO 1: Clasificación de Relevancia ---
                 prompt_relevance_check = """Evalúa la siguiente imagen. ¿Está relacionada principalmente con temas de trabajo de un conductor de DiDi (como incentivos, ganancias, mapas, problemas de la app, comunicaciones de la empresa, vehículos de trabajo, condiciones de la carretera relevantes para el trabajo) O es una imagen personal/meme/irrelevante para el contexto laboral (como selfies, comida, vacaciones, chistes no relacionados)?
 Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
 """
                 is_relevant = False
                 with st.spinner(f"Clasificando relevancia de '{row_image['media_filename']}'..."):
                     generation_config_relevance = genai.types.GenerationConfig(temperature=0.1,
-                                                                               max_output_tokens=50)  # Pocos tokens para tener una respuesta simple
+                                                                               max_output_tokens=50)
                     try:
                         response_relevance = model_vision.generate_content(
                             [prompt_relevance_check, img_pil],
@@ -242,22 +243,22 @@ Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
                             classification = response_relevance.text.strip().upper()
                             if "RELEVANTE" in classification:
                                 is_relevant = True
-                            # else: # st.caption(f"'{row_image['media_filename']}' clasificada como no relevante.") # Opcional: loguear
                         else:
-                            # st.caption(f"No se pudo clasificar la relevancia de '{row_image['media_filename']}'. Respuesta bloqueada o vacía.")
-                            pass  # Asumir no relevante si la clasificación falla o es bloqueada
-                    except Exception as e_relevance:
-                        # st.warning(f"Error clasificando relevancia de '{row_image['media_filename']}': {e_relevance}")
-                        pass  # Asumir no relevante en caso de error
+                            # Si la respuesta es bloqueada o vacía, se asume no relevante.
+                            pass
+                    except Exception:
+                        # En caso de error en la API de clasificación, asumir no relevante.
+                        pass
 
                 if not is_relevant:
-                    continue  # Saltar al siguiente si no es relevante
+                    # st.caption(f"'{row_image['media_filename']}' clasificada como no relevante o error en clasificación.") # Log opcional
+                    continue
 
                 images_analyzed_in_detail += 1
 
                 # --- PASO 2: Análisis Detallado (si es relevante) ---
                 with st.expander(f"Análisis de Imagen Relevante: {row_image['media_filename']}",
-                                 expanded=True):  # Expandir por defecto las relevantes
+                                 expanded=True):
                     st.image(image_path, width=300)
                     context = get_context_for_media(df_full_chat, original_index, window=4)
                     prompt_vision_detailed = f"""Eres un asistente experto analizando conversaciones de WhatsApp de conductores de DiDi. La siguiente imagen ha sido considerada RELEVANTE para el contexto laboral de DiDi.
@@ -288,7 +289,7 @@ Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
                                 st.write("Safety Ratings:", response_detailed.candidates[0].safety_ratings)
 
                 if images_analyzed_in_detail < min(len(candidate_images), max_images_to_analyze):
-                    time.sleep(3)  # Pausa entre análisis detallados
+                    time.sleep(3)
 
             except FileNotFoundError:
                 st.warning(f"Error: No se pudo encontrar/abrir la imagen en la ruta: {image_path}")
@@ -302,11 +303,34 @@ Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
         elif images_analyzed_in_detail == 0 and images_processed_for_relevance == 0 and not candidate_images.empty:
             st.info("No se procesaron imágenes para relevancia (podría ser un límite alcanzado o error inicial).")
 
-
     except Exception as e_outer:
         st.error(f"Error general durante el análisis multimodal con Gemini ({vision_model_name}): {e_outer}")
         st.info(f"Asegúrate que el modelo '{vision_model_name}' es correcto y tienes acceso a él.")
         st.exception(e_outer)
+
+#----Funcion para Gemini determine principales temas y pain points-- Cambiar prompt para diferente contexto
+def get_topics_pain_points_gemini(text_content, text_model_name, start_date_str, end_date_str):
+    if not text_content: return "No hay texto para analizar temas."
+    prompt = f"""Eres un analista experto de conversaciones de WhatsApp, especializado en identificar problemas y temas recurrentes en grupos de conductores de DiDi en México.
+    Analiza la siguiente conversación del periodo {start_date_str} al {end_date_str}:
+    CONVERSACIÓN:\n{text_content}\n
+    Por favor, identifica y lista los siguientes puntos de forma clara y concisa:
+    1.  **Principales Temas de Conversación (3-5 temas):** Menciona los temas más discutidos.
+    2.  **Puntos de Dolor o Quejas Comunes (Pain Points) (3-5 puntos):** ¿Cuáles son las frustraciones o problemas más expresados por los conductores?
+    3.  **Sugerencias o Soluciones Propuestas (si las hay):** ¿Se mencionaron ideas para mejorar?
+    Presenta cada sección claramente. Utiliza viñetas para los puntos dentro de cada sección."""
+    try:
+        model = genai.GenerativeModel(text_model_name)
+        generation_config = genai.types.GenerationConfig(temperature=0.5, max_output_tokens=8192)
+        safety_settings=[{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
+        response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
+        if response.parts: return response.text
+        else:
+            st.error("Respuesta de Gemini (temas/pain points) bloqueada/vacía.")
+            if hasattr(response, 'prompt_feedback'): st.json(response.prompt_feedback)
+            if hasattr(response, 'candidates') and response.candidates: st.write("Bloqueo:", response.candidates[0].finish_reason); st.write("Safety Ratings:", response.candidates[0].safety_ratings)
+            return None
+    except Exception as e: st.error(f"Error identificando temas/pain points con Gemini ({text_model_name}): {e}"); st.exception(e); return None
 
 #Funcion para analisis de sentimiento-- Cambiar Prompt para diferente Contexto
 def get_overall_sentiment_gemini(text_content, text_model_name, start_date_str, end_date_str):
