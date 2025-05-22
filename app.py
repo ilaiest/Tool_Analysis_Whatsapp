@@ -12,7 +12,7 @@ from PIL import Image  # Para el análisis de imágenes
 import time  # Para los time.sleep
 
 # --- MODELOS GEMINI  ---
-TEXT_MODEL_NAME_GEMINI = 'gemini-2.0-flash'
+TEXT_MODEL_NAME_GEMINI = 'gemini-1.5-pro'
 VISION_MODEL_NAME_GEMINI = 'gemini-2.0-flash'
 
 
