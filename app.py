@@ -251,7 +251,7 @@ Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
                         )
                         if response_relevance.parts and response_relevance.text:
                             classification = response_relevance.text.strip().upper()
-                            if "Relevante" in classification:
+                            if "RELEVANTE" in classification:
                                 is_relevant = True
                         else:
                             # Si la respuesta es bloqueada o vacía, se asume no relevante.
