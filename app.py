@@ -161,7 +161,7 @@ def run_text_analysis_gemini_and_return(conversation_text, start_date_str, end_d
     try:
         model_text = genai.GenerativeModel(text_model_name)
         generation_config = genai.types.GenerationConfig(temperature=0.7, max_output_tokens=8192)
-        safety_settings=[{"category": c, "threshold": "BLOCK_MEDIUM_AND_ABOVE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
+        safety_settings=[{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
         response = model_text.generate_content(prompt_resumen, generation_config=generation_config, safety_settings=safety_settings)
         if response.parts: return response.text
         else:
@@ -181,7 +181,7 @@ def run_image_analysis_gemini_and_display(df_full_chat, df_filtered_for_selectio
     try:
         model_vision = genai.GenerativeModel(vision_model_name)
         generation_config_vision = genai.types.GenerationConfig(temperature=0.4, max_output_tokens=2048)
-        safety_settings_vision=[{"category": c, "threshold": "BLOCK_MEDIUM_AND_ABOVE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
+        safety_settings_vision=[{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
         for original_index, row_filtered in image_rows.head(max_images_to_analyze).iterrows():
             image_path = row_filtered['media_filepath']
             if not os.path.exists(image_path): st.warning(f"Imagen no encontrada: {image_path}. Saltando."); continue
@@ -223,7 +223,7 @@ def get_topics_pain_points_gemini(text_content, text_model_name, start_date_str,
     try:
         model = genai.GenerativeModel(text_model_name)
         generation_config = genai.types.GenerationConfig(temperature=0.5, max_output_tokens=8192)
-        safety_settings=[{"category": c, "threshold": "BLOCK_MEDIUM_AND_ABOVE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
+        safety_settings=[{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
         response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
         if response.parts: return response.text
         else:
@@ -245,7 +245,7 @@ def get_overall_sentiment_gemini(text_content, text_model_name, start_date_str, 
     try:
         model = genai.GenerativeModel(text_model_name)
         generation_config = genai.types.GenerationConfig(temperature=0.3, max_output_tokens=8192)
-        safety_settings=[{"category": c, "threshold": "BLOCK_MEDIUM_AND_ABOVE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
+        safety_settings=[{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
         response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
         if response.parts and response.text:
             category = "No determinado"; explanation = response.text
