@@ -239,7 +239,7 @@ Si la imagen NO cumple con estos criterios de alta relevancia directa para DiDi 
 Si SÍ cumple con los criterios de alta relevancia directa, responde 'RELEVANTE'.
 Responde únicamente con 'RELEVANT' o 'NO RELEVANT'.
 """
-                is_RELEVANT = False
+                is_relevant = False
                 with st.spinner(f"Clasificando relevancia de '{row_image['media_filename']}'..."):
                     generation_config_relevance = genai.types.GenerationConfig(temperature=0.1,
                                                                                max_output_tokens=50)
