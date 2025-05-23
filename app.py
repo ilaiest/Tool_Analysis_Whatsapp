@@ -237,9 +237,9 @@ Busca elementos como:
 
 Si la imagen NO cumple con estos criterios de alta relevancia directa para DiDi (por ejemplo, si es un meme genérico, una foto personal, un paisaje, comida, un vehículo sin clara identificación DiDi o contexto laboral, o contenido ambiguo), clasifícala como 'NO RELEVANTE'.
 Si SÍ cumple con los criterios de alta relevancia directa, responde 'RELEVANTE'.
-Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
+Responde únicamente con 'RELEVANT' o 'NO RELEVANT'.
 """
-                is_relevant = False
+                is_RELEVANT = False
                 with st.spinner(f"Clasificando relevancia de '{row_image['media_filename']}'..."):
                     generation_config_relevance = genai.types.GenerationConfig(temperature=0.1,
                                                                                max_output_tokens=50)
@@ -260,7 +260,7 @@ Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
                         # En caso de error en la API de clasificación, asumir no relevante.
                         pass
 
-                if not is_relevant:
+                if not is_RELEVANT:
                     # st.caption(f"'{row_image['media_filename']}' clasificada como no relevante o error en clasificación.") # Log opcional
                     continue
 
