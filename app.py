@@ -235,8 +235,8 @@ Busca elementos como:
 - Vehículos claramente identificados como DiDi en un contexto de trabajo (ej. mostrando logos, en zonas de espera designadas).
 - Problemas mecánicos o de seguridad del vehículo si el contexto sugiere que es un vehículo de trabajo.
 
-Si la imagen NO cumple con estos criterios de alta relevancia directa para DiDi (por ejemplo, si es un meme genérico, una foto personal, un paisaje, comida, un vehículo sin clara identificación DiDi o contexto laboral, o contenido ambiguo), clasifícala como 'NO PRIORITARIA'.
-Si SÍ cumple con los criterios de alta relevancia directa, responde 'PRIORITARIA'.
+Si la imagen NO cumple con estos criterios de alta relevancia directa para DiDi (por ejemplo, si es un meme genérico, una foto personal, un paisaje, comida, un vehículo sin clara identificación DiDi o contexto laboral, o contenido ambiguo), clasifícala como 'NO RELEVANTE'.
+Si SÍ cumple con los criterios de alta relevancia directa, responde 'RELEVANTE'.
 Responde únicamente con 'RELEVANTE' o 'NO RELEVANTE'.
 """
                 is_relevant = False
