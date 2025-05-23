@@ -260,7 +260,7 @@ Responde únicamente con 'RELEVANT' o 'NO RELEVANT'.
                         # En caso de error en la API de clasificación, asumir no relevante.
                         pass
 
-                if not is_RELEVANT:
+                if not is_relevant:
                     # st.caption(f"'{row_image['media_filename']}' clasificada como no relevante o error en clasificación.") # Log opcional
                     continue
 
