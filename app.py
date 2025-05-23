@@ -174,6 +174,8 @@ def run_text_analysis_gemini_and_return(conversation_text, start_date_str, end_d
 #---- Funcion para analisis de imagenes-- Cambiar Prompt para tener otro contexto
 #Se añadio una revision para definir si una imagen es relevante
 
+# Coloca esta función en tu app.py junto con las otras definiciones de funciones de Gemini.
+
 def run_image_analysis_gemini_and_display(df_full_chat, df_filtered_for_selection, max_images_to_analyze,
                                           vision_model_name):
     st.subheader(f"🖼️ Análisis de Imágenes Relevantes con Gemini (primeras {max_images_to_analyze} consideradas)")
@@ -198,16 +200,18 @@ def run_image_analysis_gemini_and_display(df_full_chat, df_filtered_for_selectio
     images_analyzed_in_detail = 0
 
     try:
-        # Se usa el mismo modelo para clasificacion y analisis detallado si es necesario usar un modelo mas sencillo
         model_vision = genai.GenerativeModel(vision_model_name)
-
-        # Configuración de seguridad 
-        safety_settings_vision = [{"category": c, "threshold": "BLOCK_NONE"} for c in
+        
+        # Configuración de seguridad. BLOCK_MEDIUM_AND_ABOVE es un default razonable.
+        # Si sigues teniendo imágenes relevantes bloqueadas injustamente, considera BLOCK_ONLY_HIGH para HARM_CATEGORY_HARASSMENT.
+        # BLOCK_NONE es muy permisivo y debe usarse con precaución.
+        safety_settings_vision = [{"category": c, "threshold": "BLOCK_MEDIUM_AND_ABOVE"} for c in
                                   ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH",
                                    "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]]
 
         for original_index, row_image in candidate_images.iterrows():
-            if images_processed_for_relevance >= (max_images_to_analyze * 2) + 5 and images_analyzed_in_detail >= max_images_to_analyze :
+            # Heurística para no procesar un número excesivo de imágenes
+            if images_processed_for_relevance >= (max_images_to_analyze * 3) + 5 and images_analyzed_in_detail >= max_images_to_analyze:
                 st.caption(f"Se alcanzó un límite de consideración de imágenes para mantener el rendimiento.")
                 break
             if images_analyzed_in_detail >= max_images_to_analyze:
@@ -225,93 +229,99 @@ def run_image_analysis_gemini_and_display(df_full_chat, df_filtered_for_selectio
                 img_pil = Image.open(image_path)
                 if img_pil.mode == 'RGBA': img_pil = img_pil.convert('RGB')
 
-                # --- PASO 1: Clasificación de Relevancia ---
-                prompt_relevance_check = """Analiza la siguiente imagen. Determina si su contenido visual es **directa y significativamente relevante** para un análisis de negocio o de operaciones de DiDi.
-Busca elementos como:
-- Capturas de pantalla de la aplicación DiDi (ganancias, mapas, mensajes de la app, problemas técnicos).
-- Comunicaciones oficiales de DiDi (banners, anuncios de incentivos, cambios de tarifa).
-- Precios, tarifas, o discusiones sobre ingresos claramente visibles.
-- Marketing o publicidad de DiDi.
-- Vehículos claramente identificados como DiDi en un contexto de trabajo (ej. mostrando logos, en zonas de espera designadas).
-- Problemas mecánicos o de seguridad del vehículo si el contexto sugiere que es un vehículo de trabajo.
+                # --- PASO 1: Obtener contexto y Clasificación de Relevancia Visual Estricta ---
+                context_text_for_relevance = get_context_for_media(df_full_chat, original_index, window=2) # Ventana pequeña para el prompt
 
-Si la imagen NO cumple con estos criterios de alta relevancia directa para DiDi (por ejemplo, si es un meme genérico, una foto personal, un paisaje, comida, un vehículo sin clara identificación DiDi o contexto laboral, o contenido ambiguo), clasifícala como 'NO RELEVANTE'.
-Si SÍ cumple con los criterios de alta relevancia directa, responde 'RELEVANTE'.
-Responde únicamente con 'RELEVANT' o 'NO RELEVANT'.
+                prompt_relevance_check = f"""Tu tarea es clasificar si el CONTENIDO VISUAL de la siguiente IMAGEN es DIRECTAMENTE relevante para operaciones, marketing, o la interfaz de usuario de una empresa de ride-sharing como DiDi.
+
+IMAGEN: [La imagen será adjuntada]
+CONTEXTO DE LA CONVERSACIÓN (solo para entender levemente, pero prioriza el contenido visual de la imagen):
+{context_text_for_relevance}
+
+Criterios para 'VISUALMENTE PRIORITARIA':
+- **Capturas de pantalla de la aplicación DiDi:** Mostrando ganancias, mapas con tarifas dinámicas, mensajes de la app, problemas técnicos dentro de la app.
+- **Material de Marketing o Comunicaciones Oficiales de DiDi:** Imágenes que parezcan ser banners promocionales, anuncios de incentivos de DiDi, comunicados visuales de la empresa.
+- **Imágenes de vehículos claramente identificados como DiDi** que muestren un problema mecánico, un accidente en contexto de trabajo, o una situación operativa.
+- **Fotos de documentos o tablas directamente relacionados con pagos, tarifas o normativas de DiDi.**
+
+Criterios para 'VISUALMENTE NO PRIORITARIA':
+- **Fotos personales:** Selfies, fotos de personas en vacaciones (como el letrero de una ciudad turística), reuniones sociales, comida, mascotas.
+- **Memes genéricos:** Incluso si el texto del chat los relaciona con DiDi, si la imagen en sí es un meme conocido y no una creación específica de DiDi.
+- **Paisajes o lugares genéricos:** A menos que la imagen muestre un problema específico de la carretera o una zona de espera DiDi claramente identificable y relevante para una operación.
+- **Imágenes ambiguas** que no entran claramente en las categorías prioritarias.
+
+Aunque el CONTEXTO textual pueda hablar de DiDi, si la IMAGEN en sí misma no es de los tipos listados como 'VISUALMENTE PRIORITARIA', clasifícala como 'VISUALMENTE NO PRIORITARIA'. El análisis se centrará en el contenido visual directo.
+
+Responde únicamente con 'VISUALMENTE PRIORITARIA' o 'VISUALMENTE NO PRIORITARIA'.
 """
-                is_relevant = False
-                with st.spinner(f"Clasificando relevancia de '{row_image['media_filename']}'..."):
-                    generation_config_relevance = genai.types.GenerationConfig(temperature=0.1,
-                                                                               max_output_tokens=50)
+                is_priority = False
+                with st.spinner(f"Clasificando relevancia visual de '{row_image['media_filename']}'..."):
+                    generation_config_relevance = genai.types.GenerationConfig(temperature=0.1, max_output_tokens=50)
                     try:
                         response_relevance = model_vision.generate_content(
-                            [prompt_relevance_check, img_pil],
+                            [prompt_relevance_check, img_pil], 
                             generation_config=generation_config_relevance,
                             safety_settings=safety_settings_vision
                         )
                         if response_relevance.parts and response_relevance.text:
                             classification = response_relevance.text.strip().upper()
-                            if "RELEVANT" in classification:
-                                is_relevant = True
+                            # st.caption(f"DEBUG Class for {row_image['media_filename']}: '{classification}'") # Descomenta para depurar
+                            if "VISUALMENTE PRIORITARIA" in classification:
+                                is_priority = True
                         else:
-                            # Si la respuesta es bloqueada o vacía, se asume no relevante.
-                            pass
-                    except Exception:
-                        # En caso de error en la API de clasificación, asumir no relevante.
-                        pass
+                            # st.caption(f"Clasificación de '{row_image['media_filename']}' bloqueada o vacía.") # Log opcional
+                            pass 
+                    except Exception as e_class:
+                        # st.caption(f"Excepción durante clasificación de '{row_image['media_filename']}': {e_class}") # Log opcional
+                        pass 
 
-                if not is_relevant:
-                    # st.caption(f"'{row_image['media_filename']}' clasificada como no relevante o error en clasificación.") # Log opcional
+                if not is_priority:
+                    # st.caption(f"'{row_image['media_filename']}' clasificada como VISUALMENTE NO PRIORITARIA.") # Log opcional
                     continue
 
                 images_analyzed_in_detail += 1
-
-                # --- PASO 2: Análisis Detallado (si es relevante) ---
-                with st.expander(f"Análisis de Imagen Relevante: {row_image['media_filename']}",
-                                 expanded=True):
+                
+                # --- PASO 2: Análisis Detallado (si es VISUALMENTE PRIORITARIA) ---
+                with st.expander(f"Análisis de Imagen Prioritaria: {row_image['media_filename']}", expanded=True): # Expandir por defecto
                     st.image(image_path, width=300)
-                    context = get_context_for_media(df_full_chat, original_index, window=4)
-                    prompt_vision_detailed = f"""Eres un asistente experto analizando conversaciones de WhatsApp de conductores de DiDi. La siguiente imagen ha sido considerada RELEVANTE para el contexto laboral de DiDi.
-                    Observa la imagen adjunta y lee el contexto de la conversación proporcionado (la imagen está indicada con <ARCHIVO MULTIMEDIA ADJUNTO A ANALIZAR>).
+                    # Usar un contexto potencialmente más amplio para el análisis detallado si se desea
+                    context_detailed = get_context_for_media(df_full_chat, original_index, window=4) 
+                    prompt_vision_detailed = f"""Eres un asistente experto analizando conversaciones de WhatsApp de conductores de DiDi. La siguiente imagen ha sido considerada VISUALMENTE PRIORITARIA y relevante para el contexto laboral de DiDi.
+                    Observa la imagen adjunta y lee el contexto de la conversación proporcionado.
                     Basado en ambos (imagen y texto):
-                    1. Describe concisamente el contenido principal de la imagen (ej. captura de app de ganancias, foto de vehículo/calle, meme relevante al trabajo, problema mecánico, etc.).
-                    2. ¿Cuál es el propósito probable por el que el remitente compartió esta imagen en la conversación, según el contexto?
-                    CONTEXTO DE LA CONVERSACIÓN:\n{context}\n\nANÁLISIS DE IMAGEN:"""
-
-                    with st.spinner(
-                            f"Gemini ({vision_model_name}) está analizando '{row_image['media_filename']}' en detalle... 🖼️"):
-                        generation_config_detailed = genai.types.GenerationConfig(temperature=0.4,
-                                                                                  max_output_tokens=2048)
+                    1. Describe concisamente el contenido visual principal de la imagen que la hizo prioritaria.
+                    2. ¿Cuál es el propósito probable por el que el remitente compartió esta imagen visualmente prioritaria en la conversación, según el contexto?
+                    CONTEXTO DE LA CONVERSACIÓN:\n{context_detailed}\n\nANÁLISIS DE IMAGEN:"""
+                    
+                    with st.spinner(f"Gemini ({vision_model_name}) está analizando '{row_image['media_filename']}' en detalle... 🖼️"):
+                        generation_config_detailed = genai.types.GenerationConfig(temperature=0.4, max_output_tokens=2048)
                         response_detailed = model_vision.generate_content(
-                            [prompt_vision_detailed, img_pil],
-                            generation_config=generation_config_detailed,
+                            [prompt_vision_detailed, img_pil], 
+                            generation_config=generation_config_detailed, 
                             safety_settings=safety_settings_vision
                         )
                         if response_detailed.parts and response_detailed.text:
                             st.markdown(f"**Análisis de Gemini para {row_image['media_filename']}:**")
                             st.markdown(response_detailed.text)
                         else:
-                            st.error(
-                                f"Respuesta de Gemini (análisis detallado de {row_image['media_filename']}) bloqueada/vacía.")
+                            st.error(f"Respuesta de Gemini (análisis detallado de {row_image['media_filename']}) bloqueada/vacía.")
                             if hasattr(response_detailed, 'prompt_feedback'): st.json(response_detailed.prompt_feedback)
                             if hasattr(response_detailed, 'candidates') and response_detailed.candidates:
-                                st.write("Razón de bloqueo:", response_detailed.candidates[0].finish_reason)
-                                st.write("Safety Ratings:", response_detailed.candidates[0].safety_ratings)
-
+                                st.write("Razón de bloqueo:", response_detailed.candidates[0].finish_reason); st.write("Safety Ratings:", response_detailed.candidates[0].safety_ratings)
+                
                 if images_analyzed_in_detail < min(len(candidate_images), max_images_to_analyze):
-                    time.sleep(3)
+                    time.sleep(3) # Pausa entre análisis detallados para no saturar la API
 
             except FileNotFoundError:
                 st.warning(f"Error: No se pudo encontrar/abrir la imagen en la ruta: {image_path}")
             except Exception as e_inner:
                 st.error(f"Error durante el procesamiento de la imagen {row_image['media_filename']}: {e_inner}")
                 st.exception(e_inner)
-
+        
         if images_analyzed_in_detail == 0 and images_processed_for_relevance > 0:
-            st.info(
-                "Se revisaron algunas imágenes, pero ninguna fue considerada suficientemente relevante para un análisis detallado según los criterios.")
+            st.info("Se revisaron algunas imágenes, pero ninguna fue clasificada como 'Visualmente Prioritaria' para un análisis detallado según los criterios.")
         elif images_analyzed_in_detail == 0 and images_processed_for_relevance == 0 and not candidate_images.empty:
-            st.info("No se procesaron imágenes para relevancia (podría ser un límite alcanzado o error inicial).")
+             st.info("No se procesaron imágenes para relevancia (podría ser un límite alcanzado o error inicial).")
 
     except Exception as e_outer:
         st.error(f"Error general durante el análisis multimodal con Gemini ({vision_model_name}): {e_outer}")
