@@ -265,18 +265,18 @@ Responde únicamente con 'VISUALMENTE PRIORITARIA' o 'VISUALMENTE NO PRIORITARIA
                         )
                         if response_relevance.parts and response_relevance.text:
                             classification = response_relevance.text.strip().upper()
-                            # st.caption(f"DEBUG Class for {row_image['media_filename']}: '{classification}'") # Descomenta para depurar
+                            # st.caption(f"DEBUG Class for {row_image['media_filename']}: '{classification}'") #  debug
                             if "VISUALMENTE PRIORITARIA" in classification:
                                 is_priority = True
                         else:
-                            # st.caption(f"Clasificación de '{row_image['media_filename']}' bloqueada o vacía.") # Log opcional
+                            # st.caption(f"Clasificación de '{row_image['media_filename']}' bloqueada o vacía.") # opcional
                             pass 
                     except Exception as e_class:
-                        # st.caption(f"Excepción durante clasificación de '{row_image['media_filename']}': {e_class}") # Log opcional
+                        # st.caption(f"Excepción durante clasificación de '{row_image['media_filename']}': {e_class}") #  opcional
                         pass 
 
                 if not is_priority:
-                    # st.caption(f"'{row_image['media_filename']}' clasificada como VISUALMENTE NO PRIORITARIA.") # Log opcional
+                    # st.caption(f"'{row_image['media_filename']}' clasificada como VISUALMENTE NO PRIORITARIA.") # opcional
                     continue
 
                 images_analyzed_in_detail += 1
@@ -338,6 +338,7 @@ def get_topics_pain_points_gemini(text_content, text_model_name, start_date_str,
     1.  **Principales Temas de Conversación (3-5 temas):** Menciona los temas más discutidos.
     2.  **Puntos de Dolor o Quejas Comunes (Pain Points) (3-5 puntos):** ¿Cuáles son las frustraciones o problemas más expresados por los conductores?
     3.  **Sugerencias o Soluciones Propuestas (si las hay):** ¿Se mencionaron ideas para mejorar?
+    4.  **Preguntas Explícitas Clave (si las hay, máximo 3-5 ejemplos relevantes):** Lista algunas de las preguntas más directas y significativas hechas por los miembros del grupo sobre temas importantes (ej. funcionamiento de la app, tarifas, incentivos, problemas específicos, etc.). Intenta capturar la pregunta tal cual fue formulada si es posible, o un resumen muy fiel de la misma.
     Presenta cada sección claramente. Utiliza viñetas para los puntos dentro de cada sección."""
     try:
         model = genai.GenerativeModel(text_model_name)
@@ -475,7 +476,7 @@ if not st.session_state.df_chat_full.empty:
 
 if not st.session_state.df_chat_filtered.empty and gemini_api_configured:
     st.sidebar.markdown("---"); st.sidebar.header("🧠 Análisis con Gemini IA")
-    max_images_gemini_input = st.sidebar.number_input("Máx. imágenes a analizar con IA:", min_value=0, max_value=10, value=3, step=1, help="0 para no analizar imágenes.")
+    max_images_gemini_input = st.sidebar.number_input("Máx. imágenes a analizar con IA:", min_value=0, max_value=20, value=10, step=1, help="0 para no analizar imágenes.")
     if st.sidebar.button("✨ Ejecutar Análisis con Gemini", type="primary", help="Realiza el análisis sobre el periodo filtrado."):
         st.session_state['run_gemini_analysis'] = True
         st.session_state['max_images_gemini_run'] = max_images_gemini_input
