@@ -151,7 +151,7 @@ def get_context_for_media(df_full, media_index_in_full_df, window=5):
 #---- PROMPT para Resumen--- Cambiar si se necesita otro contexto
 def run_text_analysis_gemini_and_return(conversation_text, start_date_str, end_date_str, text_model_name):
     if not conversation_text: st.warning("No hay texto para el resumen de Gemini."); return None
-    prompt_resumen = f"""Eres un analista experto en grupos de WhatsApp de conductores de plataformas como DiDi en México. Has recibido el siguiente historial de chat de un grupo de conductores de DiDi en Los Mochis correspondiente al periodo entre {start_date_str} y {end_date_str}.
+    prompt_resumen = f"""Eres un analista experto en grupos de WhatsApp de conductores de plataformas como DiDi en México. Has recibido el siguiente historial de chat de un grupo de conductores de DiDi en una ciudad que se incluye en txt del chat correspondiente al periodo entre {start_date_str} y {end_date_str}.
     Por favor, lee cuidadosamente la conversación y genera un resumen conciso (máximo 300 palabras) que incluya:
     1. Los 3-4 temas o problemas principales mencionados por los conductores durante este periodo (ej. tarifas bajas, cupones, competencia, incentivos, seguridad, problemas con la app, horarios, etc.).
     2. El sentimiento general expresado sobre esos temas (frustración, esperanza, resignación, etc.).
